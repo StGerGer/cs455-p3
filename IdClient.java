@@ -27,11 +27,20 @@ public class IdClient
 	    Registry registry = LocateRegistry.getRegistry(host, registryPort);
 	    LoginRequest stub = (LoginRequest) registry.lookup("IdServer");
 
+	    String uname = "purvesta";
 
-		String uname = stub.uuidLoginRequest("MY UUID THAT I GOT FROM USER INPUT?");
-		UUID uuid = stub.unameLoginRequest("UNAME THAT I GOT FROM USER INPUT");
-	    System.out.println(uname);
-	    System.out.println(uuid.toString());
+	    stub.createLoginName(uname);
+
+		String uuid = stub.unameLoginRequest(uname);
+		System.out.println("UUID from unameLoginRequest: "+uuid);
+		String reqUname = stub.uuidLoginRequest(uuid);
+	    System.out.println("Uname from uuidLoginRequest: "+reqUname);
+
+	    stub.modifyLoginName(uname, "_purvesta");
+
+	    reqUname = stub.uuidLoginRequest(uuid);
+	    System.out.println("Uname from uuidLoginRequest: "+reqUname);
+
 	} catch (Exception e) {
 	    System.err.println("Client exception: " + e.toString());
 	    e.printStackTrace();
