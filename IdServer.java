@@ -12,6 +12,7 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
     private static int registryPort = 1099;
     // uname: [uuid, ip, receivedTime, realUname, lastChangeDate]
     private HashMap<String, String[]> dict;
+    private static Timer t;
 
     public IdServer(String s) throws RemoteException {
         super();
@@ -108,7 +109,19 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
     static class Task extends TimerTask {
         public void run() {
             System.out.println("Backing up...");
+
+            // Reset timer
+            resetTimer();
         }
+    }
+
+    /**
+     * Reset the idle timer.
+     */
+    public static void resetTimer() {
+    	t.cancel();
+    	t = new Timer();
+    	t.schedule(new Task(), 5*60*1000);
     }
 
     public static void main(String[] args) {
@@ -173,7 +186,7 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
             e.printStackTrace();
         }
 
-        Timer t = new Timer();
+        t = new Timer();
         // New timer scheduled for 5 min
         t.schedule(new Task(), 5*60*1000);
         Runtime.getRuntime().addShutdownHook(new ShutdownHook());
