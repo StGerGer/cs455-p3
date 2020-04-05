@@ -5,10 +5,7 @@ import java.rmi.*;
 import java.rmi.registry.*;
 import java.rmi.server.ServerNotActiveException;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.Date;
-import java.util.Set;
-import java.util.UUID;
-import java.util.HashMap;
+import java.util.*;
 
 public class IdServer extends UnicastRemoteObject implements LoginRequest {
     private String name; // Not sure what this is for...
@@ -95,6 +92,25 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         }
     }
 
+    /**
+     * Shutdown timer class.
+     */
+    static class ShutdownHook extends Thread {
+        public void run() {
+            //Stuff to do on shutdown
+            System.out.println("Shutting down...");
+        }
+    }
+
+    /**
+     * Task that runs on timeout.
+     */
+    static class Task extends TimerTask {
+        public void run() {
+            System.out.println("Backing up...");
+        }
+    }
+
     public static void main(String[] args) {
         boolean verbose = false;
 
@@ -156,10 +172,14 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
             System.out.println("IdServer err: " + e.getMessage());
             e.printStackTrace();
         }
+
+        Timer t = new Timer();
+        // New timer scheduled for 5 min
+        t.schedule(new Task(), 5*60*1000);
+        Runtime.getRuntime().addShutdownHook(new ShutdownHook());
     }
 
     private static void printUsage() {
         System.out.println("Usage: java IdServer [--numport <port#>] [--verbose]");
     }
 }
-
