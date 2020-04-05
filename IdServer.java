@@ -78,6 +78,7 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
     public void modifyLoginName(String oldUname, String newUname) throws RemoteException {
         if(dict.containsKey(oldUname)) {
             String[] arr = dict.get(oldUname);
+            dict.remove(oldUname);
             dict.put(newUname, arr);
         }
         else{
