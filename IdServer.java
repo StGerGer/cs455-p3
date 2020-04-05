@@ -1,4 +1,6 @@
 import java.lang.reflect.Array;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.rmi.*;
 import java.rmi.registry.*;
 import java.rmi.server.ServerNotActiveException;
@@ -61,15 +63,21 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
             // Could potentially create a duplicate right?
             UUID uuid = UUID.randomUUID();
             String ip = "";
+            String client = "";
             Date d = new Date();
+
             try {
                 ip = getClientHost();
+                InetAddress ipv4 = InetAddress.getByName(ip);
+                client = InetAddress.getByAddress(ipv4.getAddress()).getHostName();
             } catch (ServerNotActiveException e) {
                 e.printStackTrace();
             }
+            catch (UnknownHostException e) {
+                e.printStackTrace();
+            }
 
-            System.out.println(ip);
-            String[] arr = {uuid.toString(), ip, d.toString(), ip, d.toString()};
+            String[] arr = {uuid.toString(), ip, d.toString(), client, d.toString()};
             dict.put(uname, arr);
         }
     }
@@ -88,8 +96,34 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
     }
 
     public static void main(String[] args) {
+        boolean verbose = false;
+
+        // Arg parse stuff
         if (args.length > 0) {
-            registryPort = Integer.parseInt(args[0]);
+            switch(args.length){
+                case 1:
+                    if(!(args[0].equals("--verbose"))){
+                        printUsage();
+                        System.exit(1);
+                    }
+                    verbose = true;
+                    break;
+                case 2:
+                    if(!(args[0].equals("--numport"))) {
+                        printUsage();
+                        System.exit(1);
+                    }
+                    registryPort = Integer.parseInt(args[1]);
+                    break;
+                case 3:
+                    if(!(args[0].equals("--numport")) || !(args[2].equals("--verbose"))) {
+                        printUsage();
+                        System.exit(1);
+                    }
+                    registryPort = Integer.parseInt(args[1]);
+                    verbose = true;
+                    break;
+            }
         }
 
         // Connect to the registry or create a new registry if there isn't one already
@@ -123,4 +157,9 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
             e.printStackTrace();
         }
     }
+
+    private static void printUsage() {
+        System.out.println("Usage: java IdServer [--numport <port#>] [--verbose]");
+    }
 }
+
