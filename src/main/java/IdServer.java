@@ -20,7 +20,6 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         dict = new HashMap<String, String[]>();
     }
 
-    @Override
     public String unameLoginRequest(String uname) throws RemoteException {
         String retVal = null;
         if(dict.containsKey(uname)){
@@ -30,7 +29,6 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         return retVal;
     }
 
-    @Override
     public String uuidLoginRequest(String uuid) throws RemoteException {
         String retVal = null;
         retVal = getKeyFromValue(uuid);
@@ -52,7 +50,6 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         return retVal;
     }
 
-    @Override
     public void createLoginName(String uname) throws RemoteException {
         if(dict.containsKey(uname)){
             throw new RemoteException("Uname already exists.");
@@ -74,7 +71,6 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         }
     }
 
-    @Override
     public void modifyLoginName(String oldUname, String newUname) throws RemoteException {
         if(dict.containsKey(oldUname)) {
             String[] arr = dict.get(oldUname);
