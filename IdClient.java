@@ -25,7 +25,7 @@ public class IdClient
 
 	try {
 	    Registry registry = LocateRegistry.getRegistry(host, registryPort);
-	    LoginRequest stub = (LoginRequest) registry.lookup("IdServer");
+	    LoginRequest stub = (LoginRequest) registry.lookup("//" + host + ":" + registryPort + "/IdServer");
 
 	    String uname = "purvesta";
 
