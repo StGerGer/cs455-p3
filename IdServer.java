@@ -86,7 +86,22 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         }
     }
 
-    public static void main(String args[]) {
+    public static void main(String[] args) {
+        // Connect to the registry or create a new registry if there isn't one already
+        Registry registry = null;
+        try {
+            registry = LocateRegistry.getRegistry(registryPort);
+            registry.list();
+        } catch (RemoteException e) {
+            try {
+                System.out.println("No registry found on given port, creating a new one");
+                registry = LocateRegistry.createRegistry(registryPort);
+            } catch (RemoteException e2) {
+                System.out.println("Unable to find or create registry: " + e2.getMessage());
+                System.exit(0);
+            }
+        }
+
         if (args.length > 0) {
             registryPort = Integer.parseInt(args[0]);
         }
@@ -96,10 +111,11 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
             // Create and install a security manager
             System.setSecurityManager(new SecurityManager());
             System.out.println("Set security manager");
-            Registry registry = LocateRegistry.getRegistry(registryPort);
+            //Registry registry = LocateRegistry.getRegistry(registryPort);
             System.out.println("Got registry");
             IdServer obj = new IdServer("//IdServer");
-            registry.rebind("IdServer", obj);
+            System.out.println("Created server");
+            registry.rebind("//localhost:" + registryPort + "/IdServer", obj);
             System.out.println("IdServer bound in registry");
         } catch (Exception e) {
             System.out.println("IdServer err: " + e.getMessage());
