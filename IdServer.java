@@ -87,6 +87,10 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
     }
 
     public static void main(String[] args) {
+        if (args.length > 0) {
+            registryPort = Integer.parseInt(args[0]);
+        }
+
         // Connect to the registry or create a new registry if there isn't one already
         Registry registry = null;
         try {
@@ -100,10 +104,6 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
                 System.out.println("Unable to find or create registry: " + e2.getMessage());
                 System.exit(0);
             }
-        }
-
-        if (args.length > 0) {
-            registryPort = Integer.parseInt(args[0]);
         }
 
         try {
