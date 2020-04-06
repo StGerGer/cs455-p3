@@ -20,7 +20,6 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         dict = new HashMap<String, String[]>();
     }
 
-    @Override
     public String unameLoginRequest(String uname) throws RemoteException {
         String retVal = null;
         if(dict.containsKey(uname)){
@@ -30,7 +29,6 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         return retVal;
     }
 
-    @Override
     public String uuidLoginRequest(String uuid) throws RemoteException {
         String retVal = null;
         retVal = getKeyFromValue(uuid);
@@ -52,7 +50,6 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         return retVal;
     }
 
-    @Override
     public void createLoginName(String uname) throws RemoteException {
         if(dict.containsKey(uname)){
             throw new RemoteException("Uname already exists.");
@@ -81,6 +78,20 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
     }
 
     @Override
+    public void createLoginName(String uname, String realName, String password) throws RemoteException {
+        System.out.println("Adding " + uname + " to registry...");
+    }
+
+    @Override
+    public void lookup(String loginName) throws RemoteException {
+
+    }
+
+    @Override
+    public void reverseLookup(String Uuid) throws RemoteException {
+
+    }
+
     public void modifyLoginName(String oldUname, String newUname) throws RemoteException {
         if(dict.containsKey(oldUname)) {
             String[] arr = dict.get(oldUname);
@@ -93,35 +104,19 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         }
     }
 
-    /**
-     * Shutdown timer class.
-     */
-    static class ShutdownHook extends Thread {
-        public void run() {
-            //Stuff to do on shutdown
-            System.out.println("Shutting down...");
-        }
+    @Override
+    public void modifyLoginName(String oldLoginName, String newLoginName, String password) throws RemoteException {
+
     }
 
-    /**
-     * Task that runs on timeout.
-     */
-    static class Task extends TimerTask {
-        public void run() {
-            System.out.println("Backing up...");
+    @Override
+    public void delete(String loginName, String password) throws RemoteException {
 
-            // Reset timer
-            resetTimer();
-        }
     }
 
-    /**
-     * Reset the idle timer.
-     */
-    public static void resetTimer() {
-    	t.cancel();
-    	t = new Timer();
-    	t.schedule(new Task(), 5*60*1000);
+    @Override
+    public void get(String type) throws RemoteException {
+
     }
 
     public static void main(String[] args) {
@@ -190,6 +185,37 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         // New timer scheduled for 5 min
         t.schedule(new Task(), 5*60*1000);
         Runtime.getRuntime().addShutdownHook(new ShutdownHook());
+    }
+
+    /**
+     * Shutdown timer class.
+     */
+    static class ShutdownHook extends Thread {
+        public void run() {
+            //Stuff to do on shutdown
+            System.out.println("Shutting down...");
+        }
+    }
+
+    /**
+     * Task that runs on timeout.
+     */
+    static class Task extends TimerTask {
+        public void run() {
+            System.out.println("Backing up...");
+
+            // Reset timer
+            resetTimer();
+        }
+    }
+
+    /**
+     * Reset the idle timer.
+     */
+    public static void resetTimer() {
+        t.cancel();
+        t = new Timer();
+        t.schedule(new Task(), 5 * 60 * 1000);
     }
 
     private static void printUsage() {
