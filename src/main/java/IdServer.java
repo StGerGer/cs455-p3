@@ -71,6 +71,21 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         }
     }
 
+    @Override
+    public void createLoginName(String uname, String realName, String password) throws RemoteException {
+        System.out.println("Adding " + uname + " to registry...");
+    }
+
+    @Override
+    public void lookup(String loginName) throws RemoteException {
+
+    }
+
+    @Override
+    public void reverseLookup(String Uuid) throws RemoteException {
+
+    }
+
     public void modifyLoginName(String oldUname, String newUname) throws RemoteException {
         if(dict.containsKey(oldUname)) {
             String[] arr = dict.get(oldUname);
@@ -80,6 +95,21 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
             // Throw expception if modification failed
             throw new RemoteException("Old uname does not exist.");
         }
+    }
+
+    @Override
+    public void modifyLoginName(String oldLoginName, String newLoginName, String password) throws RemoteException {
+
+    }
+
+    @Override
+    public void delete(String loginName, String password) throws RemoteException {
+
+    }
+
+    @Override
+    public void get(String type) throws RemoteException {
+
     }
 
     public static void main(String[] args) {
