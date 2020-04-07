@@ -11,112 +11,88 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
     private String name; // Not sure what this is for...
     private static int registryPort = 1099;
     // uname: [uuid, ip, receivedTime, realUname, lastChangeDate]
-    private HashMap<String, String[]> dict;
     private static Timer t;
+    private HashMap<String, UserData> dict;
 
     public IdServer(String s) throws RemoteException {
         super();
         name = s;
-        dict = new HashMap<String, String[]>();
+        dict = new HashMap<>();
     }
 
-    public String unameLoginRequest(String uname) throws RemoteException {
+    public String unameLoginRequest(String uname) {
         String retVal = null;
         if(dict.containsKey(uname)){
-            retVal = dict.get(uname)[0];
+            retVal = dict.get(uname).getUUID().toString();
         }
 
         return retVal;
     }
 
-    public String uuidLoginRequest(String uuid) throws RemoteException {
-        String retVal = null;
-        retVal = getKeyFromValue(uuid);
-
-        return retVal;
+    public String uuidLoginRequest(String uuid) {
+        return findUUID(uuid);
     }
 
-    private String getKeyFromValue(String uuid) {
-        String retVal = null;
-        Set<String> keys = dict.keySet();
-        for(String key: keys){
-            if(dict.get(key)[0].equals(uuid)){
-                // Once we find the right <k,v> pair, break and return
-                retVal = key;
-                break;
-            }
+    @Override
+    public void createLoginName(String loginName, String realName, String password) throws RemoteException {
+        System.out.println("Adding " + loginName + " to registry...");
+        if(dict.containsKey(loginName)){
+            throw new RemoteException("Login name already exists.");
         }
-
-        return retVal;
-    }
-
-    public void createLoginName(String uname) throws RemoteException {
-        if(dict.containsKey(uname)){
-            throw new RemoteException("Uname already exists.");
-        }
-        else{
-            // Could potentially create a duplicate right?
-            UUID uuid = UUID.randomUUID();
+        else {
             String ip = "";
-            String client = "";
-            Date d = new Date();
-
             try {
                 ip = getClientHost();
                 InetAddress ipv4 = InetAddress.getByName(ip);
-                client = InetAddress.getByAddress(ipv4.getAddress()).getHostName();
-            } catch (ServerNotActiveException e) {
-                e.printStackTrace();
-            }
-            catch (UnknownHostException e) {
+            } catch (ServerNotActiveException | UnknownHostException e) {
                 e.printStackTrace();
             }
 
-            String[] arr = {uuid.toString(), ip, d.toString(), client, d.toString()};
-            dict.put(uname, arr);
+            System.out.println(ip);
+            dict.put(loginName, new UserData(loginName, realName, password, ip));
         }
     }
 
     @Override
-    public void createLoginName(String uname, String realName, String password) throws RemoteException {
-        System.out.println("Adding " + uname + " to registry...");
+    public void lookup(String loginName) {
+        // TODO: Add lookup logic
     }
 
     @Override
-    public void lookup(String loginName) throws RemoteException {
-
-    }
-
-    @Override
-    public void reverseLookup(String Uuid) throws RemoteException {
-
-    }
-
-    public void modifyLoginName(String oldUname, String newUname) throws RemoteException {
-        if(dict.containsKey(oldUname)) {
-            String[] arr = dict.get(oldUname);
-            dict.remove(oldUname);
-            dict.put(newUname, arr);
-        }
-        else{
-            // Throw expception if modification failed
-            throw new RemoteException("Old uname does not exist.");
-        }
+    public void reverseLookup(String Uuid) {
+        // TODO: Add reverse lookup logic
     }
 
     @Override
     public void modifyLoginName(String oldLoginName, String newLoginName, String password) throws RemoteException {
-
+        if(dict.containsKey(oldLoginName)) {
+            // TODO: Check for password
+            UserData user = dict.get(oldLoginName);
+            user.setLoginName(newLoginName);
+            dict.put(newLoginName, user);
+        }
+        else {
+            // Throw exception if modification failed
+            throw new RemoteException("Provided username does not exist");
+        }
     }
 
     @Override
     public void delete(String loginName, String password) throws RemoteException {
-
+        if(dict.containsKey(loginName)) {
+            if(dict.get(loginName).getPassword().equals(password)) {
+                dict.remove(loginName);
+            } else {
+                throw new RemoteException("Incorrect password");
+            }
+        } else {
+            throw new RemoteException("Provided username does not exist");
+        }
     }
 
     @Override
-    public void get(String type) throws RemoteException {
-
+    public void get(String type) {
+        // TODO: Add get logic
     }
 
     public static void main(String[] args) {
@@ -157,8 +133,9 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
             registry.list();
         } catch (RemoteException e) {
             try {
-                System.out.println("No registry found on given port, creating a new one");
+                System.out.println("No registry found on given port, creating a new one...");
                 registry = LocateRegistry.createRegistry(registryPort);
+                System.out.println("Registry created.");
             } catch (RemoteException e2) {
                 System.out.println("Unable to find or create registry: " + e2.getMessage());
                 System.exit(0);
@@ -166,7 +143,6 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         }
 
         try {
-            System.out.println("Made it to the try");
             // Create and install a security manager
             System.setSecurityManager(new SecurityManager());
             System.out.println("Set security manager");
@@ -220,5 +196,24 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
 
     private static void printUsage() {
         System.out.println("Usage: java IdServer [--numport <port#>] [--verbose]");
+    }
+
+    /**
+     * Find a user given their UUID.
+     * @param uuid UUID to search for
+     * @return index of connected user in HashMap
+     */
+    private String findUUID(String uuid) {
+        String retVal = null;
+        Set<String> keys = dict.keySet();
+        for(String key: keys){
+            if(dict.get(key).getUUID().toString().equals(uuid)){
+                // Once we find the right <k,v> pair, break and return
+                retVal = key;
+                break;
+            }
+        }
+
+        return retVal;
     }
 }
