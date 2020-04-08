@@ -1,11 +1,12 @@
+import java.nio.charset.StandardCharsets;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import org.apache.commons.cli.*;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
-import java.util.Arrays;
-import java.util.UUID;
 
 public class IdClient {
 
@@ -27,7 +28,7 @@ public class IdClient {
 				if(input.hasOption("password")) password = input.getOptionValue("password");
 				String[] createArgs = input.getOptionValues("create");
 				if(createArgs.length < 2) {
-					queryCreate(stub, createArgs[0], null, password);
+					queryCreate(stub, createArgs[0], System.getProperty("user.name"), password);
 				} else {
 					queryCreate(stub, createArgs[0], createArgs[1], password);
 				}
@@ -44,7 +45,7 @@ public class IdClient {
 			if(input.hasOption("modify")) {
 				String password = null;
 				if(input.hasOption("password")) password = input.getOptionValue("password");
-				String[] modifyArgs = input.getOptionValues("create");
+				String[] modifyArgs = input.getOptionValues("modify");
 				queryModify(stub, modifyArgs[0], modifyArgs[1], password);
 			}
 			// Delete
@@ -76,7 +77,15 @@ public class IdClient {
 	 * @throws RemoteException
 	 */
 	private static void queryCreate(LoginRequest stub, String loginName, String realName, String password) throws RemoteException {
-		stub.createLoginName(loginName, realName, password);
+		if(password != null) {
+			try {
+				password = trySHA(password);
+			} catch (java.security.NoSuchAlgorithmException e) {
+				System.err.println(e);
+			}
+		}
+
+		System.out.println(stub.createLoginName(loginName, realName, password));
 	}
 
 	/**
@@ -86,7 +95,7 @@ public class IdClient {
 	 * @throws RemoteException
 	 */
 	private static void queryLookup(LoginRequest stub, String loginName) throws RemoteException {
-		stub.lookup(loginName);
+		System.out.println(stub.lookup(loginName));
 	}
 
 	/**
@@ -96,7 +105,7 @@ public class IdClient {
 	 * @throws RemoteException
 	 */
 	private static void queryReverseLookup(LoginRequest stub, String uuid) throws RemoteException {
-		stub.reverseLookup(uuid);
+		System.out.println(stub.reverseLookup(uuid));
 	}
 
 	/**
@@ -108,7 +117,14 @@ public class IdClient {
 	 * @throws RemoteException
 	 */
 	private static void queryModify(LoginRequest stub, String oldName, String newName, String password) throws RemoteException {
-		stub.modifyLoginName(oldName, newName, password);
+		if(password != null) {
+			try {
+				password = trySHA(password);
+			} catch (java.security.NoSuchAlgorithmException e) {
+				System.err.println(e);
+			}
+		}
+		System.out.println(stub.modifyLoginName(oldName, newName, password));
 	}
 
 	/**
@@ -119,7 +135,14 @@ public class IdClient {
 	 * @throws RemoteException
 	 */
 	private static void queryDelete(LoginRequest stub, String loginName, String password) throws RemoteException {
-		stub.delete(loginName, password);
+		if(password != null) {
+			try {
+				password = trySHA(password);
+			} catch (java.security.NoSuchAlgorithmException e) {
+				System.err.println(e);
+			}
+		}
+		System.out.println(stub.delete(loginName, password));
 	}
 
 	/**
@@ -129,7 +152,7 @@ public class IdClient {
 	 * @throws RemoteException
 	 */
 	private static void queryGet(LoginRequest stub, String type) throws RemoteException {
-		stub.get(type);
+		System.out.println(stub.get(type));
 	}
 
 	private static CommandLine handleArgs(String[] args) {
@@ -192,5 +215,17 @@ public class IdClient {
 			super(opt, longOpt, hasArg, description);
 			this.setRequired(true);
 		}
+	}
+
+	private static String trySHA(String input) throws NoSuchAlgorithmException {
+		MessageDigest md = MessageDigest.getInstance("SHA-512");
+		byte[] bytes = input.getBytes();
+		md.reset();
+
+		byte[] result = md.digest(bytes);
+		StringBuilder retVal = new StringBuilder();
+		for (byte b : result) retVal.append(String.format("%X", b));
+
+		return retVal.toString();
 	}
 }

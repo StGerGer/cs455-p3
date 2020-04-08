@@ -1,10 +1,11 @@
+import java.io.Serializable;
 import java.util.Date;
 import java.util.UUID;
 
 /**
  * Data structure for holding user data.
  */
-public class UserData {
+public class UserData implements Serializable {
     private String loginName;
     private String realName;
     private String password;
@@ -71,5 +72,17 @@ public class UserData {
 
     public Date getLastChangeDate() {
         return lastChangeDate;
+    }
+
+    public String toString() {
+        String retVal = "";
+        retVal += "User: "+this.getLoginName()+"\n";
+        retVal += "Real Name: "+this.getRealName()+"\n";
+        retVal += "UUID: "+this.getUUID()+"\n";
+        retVal += "IP: "+this.getIp()+"\n";
+        retVal += "Last Change: "+this.getLastChangeDate()+"\n";
+        retVal += "Last Request: "+this.getLastRequestDate()+"\n";
+
+        return retVal;
     }
 }
