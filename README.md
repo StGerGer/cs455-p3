@@ -40,4 +40,4 @@ We decided to go with Apache Maven as our build system after including one of th
 
 ## Extras
 
-Video Demonstration: TBD
+Video Demonstration: [Video] (https://youtu.be/6Pb3x_u-7DE)
