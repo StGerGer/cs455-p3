@@ -1,15 +1,17 @@
 import java.io.*;
-import java.lang.reflect.Array;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.rmi.*;
 import java.rmi.registry.*;
 import java.rmi.server.ServerNotActiveException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 
+/**
+ * Server class to track users and serve requests
+ *
+ * @author Tanner Purves
+ * @author Nate St. George
+ */
 public class IdServer extends UnicastRemoteObject implements LoginRequest {
-    private String name; // Not sure what this is for...
     private static int registryPort = 1099;
     // uname: [uuid, ip, receivedTime, realUname, lastChangeDate]
     private static Timer t;
@@ -17,10 +19,18 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
 
     public IdServer(String s) throws RemoteException {
         super();
-        name = s;
         dict = new HashMap<>();
     }
 
+    /**
+     * This rmi method is used to create a new user in the system.
+     *
+     * @param loginName The user login name
+     * @param realName The real name of the user
+     * @param password The password hash
+     * @return Success statement and user information created
+     * @throws RemoteException If error occurs
+     */
     @Override
     public String createLoginName(String loginName, String realName, String password) throws RemoteException {
         System.out.println("Adding " + loginName + " to registry...");
@@ -46,6 +56,13 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         return retVal;
     }
 
+    /**
+     * This rmi method is used to lookup a particular user.
+     *
+     * @param loginName The user login name
+     * @return A string representation of user data for the requested user
+     * @throws RemoteException If error occurs
+     */
     @Override
     public String lookup(String loginName) throws RemoteException{
         String retVal = "";
@@ -62,6 +79,13 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         return retVal;
     }
 
+    /**
+     * This rmi method is used to lookup a particular user by providing their uuid.
+     *
+     * @param Uuid The uuid of the requested user
+     * @return A string representation of user data for the requested user
+     * @throws RemoteException If error occurs
+     */
     @Override
     public String reverseLookup(String Uuid) throws RemoteException{
         String loginName = findUUID(Uuid);
@@ -77,6 +101,15 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         return retVal;
     }
 
+    /**
+     * This rmi method is used to modify an existing user's login name. *Requires associated login password
+     *
+     * @param oldLoginName The old login name that the user wishes to modify
+     * @param newLoginName The new login name that the user wishes to change to
+     * @param password The associated password with the user account login name (Can be null if no password)
+     * @return Success statement and user information that was changed
+     * @throws RemoteException If error occurs
+     */
     @Override
     public String modifyLoginName(String oldLoginName, String newLoginName, String password) throws RemoteException {
         String retVal = "";
@@ -104,6 +137,14 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         return retVal;
     }
 
+    /**
+     * This rmi method is used to delete an existing user's login account.
+     *
+     * @param loginName The user login name
+     * @param password The password associated with the user login name
+     * @return Success statement and user login name deleted=
+     * @throws RemoteException If error occurs
+     */
     @Override
     public String delete(String loginName, String password) throws RemoteException {
         String retVal = "";
@@ -126,6 +167,13 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         return retVal;
     }
 
+    /**
+     * This rmi method is used to get user information from the server data storage.
+     *
+     * @param type users | uuids | all
+     * @return A string representation of the requested data
+     * @throws RemoteException If error occurs
+     */
     @Override
     public String get(String type) throws RemoteException {
         String retVal = "";
@@ -144,6 +192,12 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         return retVal;
     }
 
+    /**
+     * This internal function is used for separating the get operation for requesting
+     * all data in the get rmi method.
+     *
+     * @return A string representation of all user data.
+     */
     private String getAll() {
         StringBuilder retVal = new StringBuilder();
 
@@ -153,6 +207,12 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         return retVal.toString();
     }
 
+    /**
+     * This internal function is used for separating the get operation for requesting
+     * uuids data in the get rmi method.
+     *
+     * @return A string representation of uuids user data.
+     */
     private String getUUIDS() {
         StringBuilder retVal = new StringBuilder();
 
@@ -162,6 +222,12 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         return retVal.toString();
     }
 
+    /**
+     * This internal function is used for separating the get operation for requesting
+     * user login name data in the get rmi method.
+     *
+     * @return A string representation of user login name data.
+     */
     private String getUsers() {
         StringBuilder retVal = new StringBuilder();
 
@@ -171,6 +237,11 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         return retVal.toString();
     }
 
+    /**
+     * The entry point method.
+     *
+     * @param args Command line parameters
+     */
     public static void main(String[] args) {
         boolean verbose = false;
 
@@ -256,6 +327,10 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
      * Shutdown timer class.
      */
     static class ShutdownHook extends Thread {
+
+        /**
+         * Default method to run on shutdown or interrupt.
+         */
         public void run() {
             //Stuff to do on shutdown
             System.out.println("Shutting down...");
@@ -273,9 +348,18 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
     static class Task extends TimerTask {
         private HashMap<String, UserData> dict;
 
+        /**
+         * Constructor.
+         *
+         * @param dict The data map
+         */
         public Task(HashMap<String, UserData> dict){
             this.dict = dict;
         }
+
+        /**
+         * The default method to run after timer expiration.
+         */
         public void run() {
             System.out.println("Backing up...");
 
@@ -290,6 +374,12 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
             resetTimer();
         }
 
+        /**
+         * Method to assist in writing data map object to file.
+         *
+         * @param dict The data map
+         * @throws IOException If error occurs
+         */
         public static void writeToFile(HashMap<String, UserData> dict) throws IOException {
             File f = new File("server.backup");
             ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(f));
@@ -299,6 +389,12 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         }
     }
 
+    /**
+     * This method reads in the backup file if one exists.
+     *
+     * @throws IOException If I/O error occurs
+     * @throws ClassNotFoundException If UserData class cannot be found
+     */
     public static void readFile() throws IOException, ClassNotFoundException {
         ObjectInputStream ois = new ObjectInputStream(new FileInputStream("server.backup"));
         dict = (HashMap<String, UserData>) ois.readObject();
@@ -313,12 +409,16 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         t.schedule(new Task(dict), 5 * 60 * 1000);
     }
 
+    /**
+     * Class usage statement.
+     */
     private static void printUsage() {
         System.out.println("Usage: java IdServer [--numport <port#>] [--verbose]");
     }
 
     /**
      * Find a user given their UUID.
+     *
      * @param uuid UUID to search for
      * @return index of connected user in HashMap
      */

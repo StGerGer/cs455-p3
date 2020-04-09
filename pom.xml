@@ -24,8 +24,9 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.1</version>
                 <configuration>
-                    <source>1.11</source>
-                    <target>1.11</target>
+                    <!-- I believe 1.8 is more common than 1.11. Onyx may not have 1.11 -->
+                    <source>1.8</source>
+                    <target>1.8</target>
                 </configuration>
             </plugin>
         </plugins>

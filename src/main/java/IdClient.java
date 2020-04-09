@@ -1,4 +1,3 @@
-import java.nio.charset.StandardCharsets;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -14,6 +13,11 @@ public class IdClient {
 	private static int registryPort = 1099;
 	private static String query;
 
+	/**
+	 * The entry point method.
+	 *
+	 * @param args Command line parameters
+	 */
 	public static void main(String[] args) {
 		CommandLine input = handleArgs(args);
 
@@ -155,6 +159,12 @@ public class IdClient {
 		System.out.println(stub.get(type));
 	}
 
+	/**
+	 * Method used for handling command line arguments.
+	 *
+	 * @param args String array of arguments
+	 * @return CommandLine object
+	 */
 	private static CommandLine handleArgs(String[] args) {
 		Options options = buildOptions();
 
@@ -217,6 +227,13 @@ public class IdClient {
 		}
 	}
 
+	/**
+	 * Method for hashing plain-text passwords with SHA-512.
+	 *
+	 * @param input The plain-text password
+	 * @return String SHA-512 hash
+	 * @throws NoSuchAlgorithmException If SHA-512 algorithm cannot be found
+	 */
 	private static String trySHA(String input) throws NoSuchAlgorithmException {
 		MessageDigest md = MessageDigest.getInstance("SHA-512");
 		byte[] bytes = input.getBytes();
