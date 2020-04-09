@@ -118,10 +118,12 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
             if(ud.hasPassword() && (ud.getPassword().equals(password))){
                 ud.setLoginName(newLoginName);
                 dict.put(newLoginName, ud);
+                dict.remove(oldLoginName);
             }
             else if(!ud.hasPassword()){
                 ud.setLoginName(newLoginName);
                 dict.put(newLoginName, ud);
+                dict.remove(oldLoginName);
             }
             else{
                 throw new RemoteException("Incorrect password.");
