@@ -46,7 +46,6 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
                 e.printStackTrace();
             }
 
-            System.out.println(ip);
             UserData ud = new UserData(loginName, realName, password, ip);
             dict.put(loginName, ud);
 
