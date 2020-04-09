@@ -5,7 +5,7 @@
 <modelVersion>4.0.0</modelVersion>
 
 <groupId>purvestgerger</groupId>
-<artifactId>workingp2</artifactId>
+<artifactId>p2</artifactId>
 <version>1.0-SNAPSHOT</version>
 
 <dependencies>
@@ -24,7 +24,7 @@
             <artifactId>maven-compiler-plugin</artifactId>
             <version>3.8.1</version>
             <configuration>
-                <!-- source and target are 1.8 as 1.8 is more common than 1.11 -->
+		<!-- source and target are 1.8, 1.8 is more common than 1.11 -->
                 <source>1.8</source>
                 <target>1.8</target>
             </configuration>
