@@ -1,0 +1,6 @@
+version: '3'
+services:
+    server:
+        image: purvesta/cs455-p3:latest
+        ports:
+        - "1099"

@@ -23,7 +23,8 @@ public class IdClient {
 
 		try {
 			Registry registry = LocateRegistry.getRegistry(host, registryPort);
-			LoginRequest stub = (LoginRequest) registry.lookup("//" + host + ":" + registryPort + "/IdServer");
+//			LoginRequest stub = (LoginRequest) registry.lookup("//" + host + ":" + registryPort + "/IdServer");
+			LoginRequest stub = (LoginRequest) registry.lookup("/IdServer");
 
 			// Handle all query types ---------------------------------
 			// Create

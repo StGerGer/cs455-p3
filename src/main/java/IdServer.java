@@ -305,7 +305,8 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
             IdServer obj = new IdServer("//IdServer");
             if(verbose)
                 System.out.println("Created server");
-            registry.rebind("//localhost:" + registryPort + "/IdServer", obj);
+//            registry.rebind("//localhost:" + registryPort + "/IdServer", obj);
+            registry.rebind("/IdServer", obj);
             readFile();
             System.out.println("IdServer bound in registry");
         }
