@@ -321,18 +321,21 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
             e.printStackTrace();
         }
 
-        HashSet<InetAddress> servers = new HashSet<InetAddress>();
+        HashMap<String,Boolean> servers = new HashMap<String, Boolean>();
+	String[] serverIps = {"172.20.0.2", "172.20.0.3", "172.20.0.4"};
         // Discover server IP addresses
-        //String hostbase = "desktop_server_";
-        //for(int i=1; i<4; i++){
-        //    try {
-        //        InetAddress ip = InetAddress.getByName(hostbase+i);
-        //        servers.add(ip);
-        //        System.out.println("Host: "+ip.getHostName()+" "+ip.getHostAddress());
-        //    } catch (UnknownHostException e) {
-        //        e.printStackTrace();
-        //    }
-        //}
+        for(int i=0; i<serverIps.length; i++){
+            try {
+                InetAddress ip = InetAddress.getByName(serverIps[i]);
+		servers.put(ip.getHostName(), ip.isReachable(5000));
+                System.out.println("Host: "+serverIps[i]+"\nOnline: "+servers.get(serverIps[i]));
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            }
+	    catch (IOException e) {
+	        e.printStackTrace();
+	    }
+        }
 
         t = new Timer();
         // New timer scheduled for 5 min
