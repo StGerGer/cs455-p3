@@ -1,10 +1,10 @@
 import java.io.*;
-import java.net.InetAddress;
 import java.rmi.*;
 import java.rmi.registry.*;
 import java.rmi.server.ServerNotActiveException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Server class to track users and serve requests
@@ -12,13 +12,14 @@ import java.util.*;
  * @author Tanner Purves
  * @author Nate St. George
  */
-public class IdServer extends UnicastRemoteObject implements LoginRequest {
+public class IdServer extends UnicastRemoteObject implements LoginRequest, ServerRequest {
     private static int registryPort = 1099;
     // uname: [uuid, ip, receivedTime, realUname, lastChangeDate]
     private static Timer t1;
     private static Timer t2;
     private static HashMap<String, UserData> dict;
-    private static HashMap<String,Boolean> servers;
+    private static HashMap<String, ServerRequest> servers;
+    private static boolean isCoordinator = false;
 
     public IdServer(String s) throws RemoteException {
         super();
@@ -322,14 +323,62 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
             e.printStackTrace();
         }
 
-        servers = new HashMap<String, Boolean>();
+        servers = new HashMap<String, ServerRequest>();
 
         t1 = new Timer();
         t2 = new Timer();
-        // New timer scheduled for 5 min
-        t1.scheduleAtFixedRate(new Task(dict), 0, 5*60*1000);
-        t2.scheduleAtFixedRate(new Ping(servers), 0, 30*1000);
+        // New timer scheduled for 5 min with a 5 min delay
+        t1.scheduleAtFixedRate(new Task(dict), 5*60*1000, 5*60*1000);
+        // New Ping scheduled for every 30 seconds to check if servers are still online
+        t2.scheduleAtFixedRate(new Ping(), 0, 30*1000);
         Runtime.getRuntime().addShutdownHook(new ShutdownHook());
+
+        // Sleep allows for server status to populate
+        try {
+            TimeUnit.SECONDS.sleep(2);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+//        System.out.println("Server list empty: "+servers.isEmpty());
+//        for(String ip: servers.keySet())
+//            System.out.println("IP: "+ip+" Online: "+servers.get(ip));
+
+        // Start election now that we have a list of online servers
+        Random r = new Random();
+        int myNum = r.nextInt(10);
+        boolean won = false;
+        for(String ip: servers.keySet()){
+            ServerRequest stub = servers.get(ip);
+            boolean keepGoing = true;
+            while(keepGoing){
+                try {
+                    int theirNum = stub.getNum();
+                    if(myNum > theirNum) {
+                        won = true;
+                        keepGoing = false;
+                    }
+                    else if(myNum < theirNum) {
+                        won = false;
+                        keepGoing = false;
+                    }
+
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+
+            }
+        }
+
+        if(won)
+            isCoordinator = true;
+
+        System.out.println("Am I the coordinator? - " + ((isCoordinator) ? "yes": "no"));
+    }
+
+    @Override
+    public int getNum() throws RemoteException {
+        Random r = new Random();
+        return r.nextInt(10);
     }
 
     /**
@@ -355,16 +404,6 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
      * Task that runs on timeout.
      */
     static class Ping extends TimerTask {
-        private HashMap<String, Boolean> servers;
-
-        /**
-         * Constructor.
-         *
-         * @param servers The servers
-         */
-        public Ping(HashMap<String, Boolean> servers){
-            this.servers = servers;
-        }
 
         /**
          * The default method to run after timer expiration.
@@ -376,12 +415,16 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
             // Discover server IP addresses
             for (String serverIp : serverIps) {
                 try {
-                    InetAddress ip = InetAddress.getByName(serverIp);
-                    boolean reachable = ip.isReachable(5000);
-                    servers.put(serverIp, reachable);
-                    System.out.println("Host: " + serverIp + "\nOnline: " + servers.get(serverIp));
-                } catch (IOException e) {
-                    e.printStackTrace();
+                    Registry r = LocateRegistry.getRegistry(serverIp, registryPort);
+                    ServerRequest stub = (ServerRequest) r.lookup("/IdServer");
+                    IdServer.servers.put(serverIp, stub);
+//                    InetAddress ip = InetAddress.getByName(serverIp);
+//                    boolean reachable = ip.isReachable(5000);
+//                    IdServer.servers.put(serverIp, reachable);
+                    System.out.println("IP: "+serverIp+" Online: True");
+                } catch (IOException | NotBoundException e) {
+                    System.out.println("IP: "+serverIp+" Online: False");
+                    IdServer.servers.put(serverIp, null);
                 }
             }
 
