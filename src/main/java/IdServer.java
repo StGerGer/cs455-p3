@@ -1,6 +1,5 @@
 import java.io.*;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.rmi.*;
 import java.rmi.registry.*;
 import java.rmi.server.ServerNotActiveException;
@@ -16,8 +15,10 @@ import java.util.*;
 public class IdServer extends UnicastRemoteObject implements LoginRequest {
     private static int registryPort = 1099;
     // uname: [uuid, ip, receivedTime, realUname, lastChangeDate]
-    private static Timer t;
+    private static Timer t1;
+    private static Timer t2;
     private static HashMap<String, UserData> dict;
+    private static HashMap<String,Boolean> servers;
 
     public IdServer(String s) throws RemoteException {
         super();
@@ -321,25 +322,13 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
             e.printStackTrace();
         }
 
-        HashMap<String,Boolean> servers = new HashMap<String, Boolean>();
-	String[] serverIps = {"172.20.0.2", "172.20.0.3", "172.20.0.4"};
-        // Discover server IP addresses
-        for(int i=0; i<serverIps.length; i++){
-            try {
-                InetAddress ip = InetAddress.getByName(serverIps[i]);
-		servers.put(ip.getHostName(), ip.isReachable(5000));
-                System.out.println("Host: "+serverIps[i]+"\nOnline: "+servers.get(serverIps[i]));
-            } catch (UnknownHostException e) {
-                e.printStackTrace();
-            }
-	    catch (IOException e) {
-	        e.printStackTrace();
-	    }
-        }
+        servers = new HashMap<String, Boolean>();
 
-        t = new Timer();
+        t1 = new Timer();
+        t2 = new Timer();
         // New timer scheduled for 5 min
-        t.schedule(new Task(dict), 5*60*1000);
+        t1.scheduleAtFixedRate(new Task(dict), 0, 5*60*1000);
+        t2.scheduleAtFixedRate(new Ping(servers), 0, 5000);
         Runtime.getRuntime().addShutdownHook(new ShutdownHook());
     }
 
@@ -359,6 +348,44 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    /**
+     * Task that runs on timeout.
+     */
+    static class Ping extends TimerTask {
+        private HashMap<String, Boolean> servers;
+
+        /**
+         * Constructor.
+         *
+         * @param servers The servers
+         */
+        public Ping(HashMap<String, Boolean> servers){
+            this.servers = servers;
+        }
+
+        /**
+         * The default method to run after timer expiration.
+         */
+        public void run() {
+            System.out.println("Pinging...");
+
+            String[] serverIps = {"172.20.0.2", "172.20.0.3", "172.20.0.4"};
+            // Discover server IP addresses
+            for (String serverIp : serverIps) {
+                try {
+                    InetAddress ip = InetAddress.getByName(serverIp);
+                    servers.put(ip.getHostName(), ip.isReachable(5000));
+                    System.out.println("Host: " + serverIp + "\nOnline: " + servers.get(serverIp));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            // Reset timer
+//            resetTimer(t2);
         }
     }
 
@@ -391,7 +418,7 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
             }
 
             // Reset timer
-            resetTimer();
+//            resetTimer(t1);
         }
 
         /**
@@ -423,11 +450,12 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
     /**
      * Reset the idle timer.
      */
-    public static void resetTimer() {
-        t.cancel();
-        t = new Timer();
-        t.schedule(new Task(dict), 5 * 60 * 1000);
-    }
+//    public static void resetTimer(Timer t) {
+//        t.
+//        t.cancel();
+//        t = new Timer();
+//        t.schedule(new Task(dict), 5 * 60 * 1000);
+//    }
 
     /**
      * Class usage statement.
