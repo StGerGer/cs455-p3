@@ -1,4 +1,6 @@
 import java.io.*;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.rmi.*;
 import java.rmi.registry.*;
 import java.rmi.server.ServerNotActiveException;
@@ -318,6 +320,19 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
             System.out.println("IdServer err: " + e.getMessage());
             e.printStackTrace();
         }
+
+        HashSet<InetAddress> servers = new HashSet<InetAddress>();
+        // Discover server IP addresses
+        //String hostbase = "desktop_server_";
+        //for(int i=1; i<4; i++){
+        //    try {
+        //        InetAddress ip = InetAddress.getByName(hostbase+i);
+        //        servers.add(ip);
+        //        System.out.println("Host: "+ip.getHostName()+" "+ip.getHostAddress());
+        //    } catch (UnknownHostException e) {
+        //        e.printStackTrace();
+        //    }
+        //}
 
         t = new Timer();
         // New timer scheduled for 5 min
