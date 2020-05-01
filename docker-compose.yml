@@ -4,3 +4,8 @@ services:
         image: purvesta/cs455-p3:latest
         ports:
         - "1099"
+networks:
+    backend:
+        ipam:
+            config:
+            - subnet: 172.20.0.0/24
