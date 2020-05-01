@@ -328,7 +328,7 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
         t2 = new Timer();
         // New timer scheduled for 5 min
         t1.scheduleAtFixedRate(new Task(dict), 0, 5*60*1000);
-        t2.scheduleAtFixedRate(new Ping(servers), 0, 5000);
+        t2.scheduleAtFixedRate(new Ping(servers), 0, 30*1000);
         Runtime.getRuntime().addShutdownHook(new ShutdownHook());
     }
 
@@ -377,15 +377,14 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
             for (String serverIp : serverIps) {
                 try {
                     InetAddress ip = InetAddress.getByName(serverIp);
-                    servers.put(ip.getHostName(), ip.isReachable(5000));
+                    boolean reachable = ip.isReachable(5000);
+                    servers.put(serverIp, reachable);
                     System.out.println("Host: " + serverIp + "\nOnline: " + servers.get(serverIp));
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
 
-            // Reset timer
-//            resetTimer(t2);
         }
     }
 
@@ -417,8 +416,6 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest {
                 e.printStackTrace();
             }
 
-            // Reset timer
-//            resetTimer(t1);
         }
 
         /**

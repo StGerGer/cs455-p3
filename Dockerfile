@@ -3,6 +3,7 @@ FROM maven:latest
 MAINTAINER Tanner Purves <tannerpurves@u.boisestate.edu>
 
 EXPOSE 1099
+EXPOSE 7
 
 RUN mkdir /cs455-p3
 COPY ./mysecurity.policy /cs455-p3
