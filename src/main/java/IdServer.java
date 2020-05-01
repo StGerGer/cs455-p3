@@ -344,6 +344,9 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
 //            System.out.println("IP: "+ip+" Online: "+servers.get(ip));
 
         // Start election now that we have a list of online servers
+        // TODO: Move to a method for starting an election
+        // TODO: Add to shutdown hook some way of communicating to other servers that election needs to happen
+        // TODO: Should only have to perform an election when the coordinator dies
         Random r = new Random();
         int myNum = r.nextInt(10);
         boolean won = false;
