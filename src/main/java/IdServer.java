@@ -1,4 +1,6 @@
 import java.io.*;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.rmi.*;
 import java.rmi.registry.*;
 import java.rmi.server.ServerNotActiveException;
@@ -20,21 +22,25 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
     private static HashMap<String, UserData> dict;
     private static HashMap<String, ServerRequest> servers;
     private static boolean isCoordinator = false;
+    private static InetAddress localIP;
+    private static InetAddress lastKnownCoordinator;
+    private static Random r = new Random();
+    private static int priority = r.nextInt(100000);
 
-    public IdServer(String s) throws RemoteException {
+    // Define localIP
+    static {
+        try {
+            localIP = InetAddress.getLocalHost();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public IdServer(String s) throws RemoteException, UnknownHostException {
         super();
         dict = new HashMap<>();
     }
 
-    /**
-     * This rmi method is used to create a new user in the system.
-     *
-     * @param loginName The user login name
-     * @param realName The real name of the user
-     * @param password The password hash
-     * @return Success statement and user information created
-     * @throws RemoteException If error occurs
-     */
     @Override
     public String createLoginName(String loginName, String realName, String password) throws RemoteException {
         System.out.println("Adding " + loginName + " to registry...");
@@ -59,13 +65,6 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
         return retVal;
     }
 
-    /**
-     * This rmi method is used to lookup a particular user.
-     *
-     * @param loginName The user login name
-     * @return A string representation of user data for the requested user
-     * @throws RemoteException If error occurs
-     */
     @Override
     public String lookup(String loginName) throws RemoteException{
         String retVal = "";
@@ -82,13 +81,6 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
         return retVal;
     }
 
-    /**
-     * This rmi method is used to lookup a particular user by providing their uuid.
-     *
-     * @param Uuid The uuid of the requested user
-     * @return A string representation of user data for the requested user
-     * @throws RemoteException If error occurs
-     */
     @Override
     public String reverseLookup(String Uuid) throws RemoteException{
         String loginName = findUUID(Uuid);
@@ -104,15 +96,6 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
         return retVal;
     }
 
-    /**
-     * This rmi method is used to modify an existing user's login name. *Requires associated login password
-     *
-     * @param oldLoginName The old login name that the user wishes to modify
-     * @param newLoginName The new login name that the user wishes to change to
-     * @param password The associated password with the user account login name (Can be null if no password)
-     * @return Success statement and user information that was changed
-     * @throws RemoteException If error occurs
-     */
     @Override
     public String modifyLoginName(String oldLoginName, String newLoginName, String password) throws RemoteException {
         String retVal = "";
@@ -142,14 +125,6 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
         return retVal;
     }
 
-    /**
-     * This rmi method is used to delete an existing user's login account.
-     *
-     * @param loginName The user login name
-     * @param password The password associated with the user login name
-     * @return Success statement and user login name deleted=
-     * @throws RemoteException If error occurs
-     */
     @Override
     public String delete(String loginName, String password) throws RemoteException {
         String retVal = "";
@@ -172,13 +147,6 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
         return retVal;
     }
 
-    /**
-     * This rmi method is used to get user information from the server data storage.
-     *
-     * @param type users | uuids | all
-     * @return A string representation of the requested data
-     * @throws RemoteException If error occurs
-     */
     @Override
     public String get(String type) throws RemoteException {
         String retVal = "";
@@ -278,6 +246,8 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
             }
         }
 
+        System.out.println("Address: " + localIP.getHostAddress());
+
         // Connect to the registry or create a new registry if there isn't one already
         Registry registry = null;
         try {
@@ -285,11 +255,10 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
             registry.list();
         } catch (RemoteException e) {
             try {
-                if(verbose)
-                    System.out.println("No registry found on given port, creating a new one...");
+                System.out.println("No registry found on given port, creating a new one...");
                 registry = LocateRegistry.createRegistry(registryPort);
-                if(verbose)
-                    System.out.println("Registry created.");
+                
+                System.out.println("Registry created.");
             } catch (RemoteException e2) {
                 System.out.println("Unable to find or create registry: " + e2.getMessage());
                 System.exit(0);
@@ -301,22 +270,21 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
 
             // Create and install a security manager
             System.setSecurityManager(new SecurityManager());
-            if(verbose)
-                System.out.println("Set security manager");
+            
+            System.out.println("Set security manager");
             //Registry registry = LocateRegistry.getRegistry(registryPort);
-            if(verbose)
-                System.out.println("Got registry");
+            
+            System.out.println("Got registry");
             IdServer obj = new IdServer("//IdServer");
-            if(verbose)
-                System.out.println("Created server");
+            // TODO: Fails here
+            System.out.println("Created server");
 //            registry.rebind("//localhost:" + registryPort + "/IdServer", obj);
             registry.rebind("/IdServer", obj);
             readFile();
             System.out.println("IdServer bound in registry");
         }
         catch (IOException | ClassNotFoundException e){
-            if(verbose)
-                System.out.println("No backup found... starting fresh.");
+            System.out.println("No backup found... starting fresh.");
         }
         catch (Exception e) {
             System.out.println("IdServer err: " + e.getMessage());
@@ -344,44 +312,25 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
 //            System.out.println("IP: "+ip+" Online: "+servers.get(ip));
 
         // Start election now that we have a list of online servers
-        // TODO: Move to a method for starting an election
-        // TODO: Add to shutdown hook some way of communicating to other servers that election needs to happen
-        // TODO: Should only have to perform an election when the coordinator dies
-        Random r = new Random();
-        int myNum = r.nextInt(10);
-        boolean won = false;
-        for(String ip: servers.keySet()){
-            ServerRequest stub = servers.get(ip);
-            boolean keepGoing = true;
-            while(keepGoing){
-                try {
-                    int theirNum = stub.getNum();
-                    if(myNum > theirNum) {
-                        won = true;
-                        keepGoing = false;
-                    }
-                    else if(myNum < theirNum) {
-                        won = false;
-                        keepGoing = false;
-                    }
+        runElection();
 
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                }
-
-            }
-        }
-
-        if(won)
-            isCoordinator = true;
-
-        System.out.println("Am I the coordinator? - " + ((isCoordinator) ? "yes": "no"));
     }
 
     @Override
-    public int getNum() throws RemoteException {
-        Random r = new Random();
-        return r.nextInt(10);
+    public int getPriority() throws RemoteException {
+        System.out.println("Importance: " + priority);
+        return priority;
+    }
+
+    @Override
+    public void iAmCoordinator(InetAddress ip) {
+        System.out.println("New coordinator: " + ip.getHostAddress());
+        lastKnownCoordinator = ip;
+    }
+
+    @Override
+    public void requestElection() {
+        runElection();
     }
 
     /**
@@ -400,6 +349,12 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
             } catch (IOException e) {
                 e.printStackTrace();
             }
+
+            // Select a new coordinator if this is the coordinator
+//            while(isCoordinator && servers.values().size() > 0) {
+//                System.out.println("Selecting new coordinator...");
+//                runElection();
+//            }
         }
     }
 
@@ -499,6 +454,55 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
 //        t = new Timer();
 //        t.schedule(new Task(dict), 5 * 60 * 1000);
 //    }
+
+    public static void runElection() {
+        boolean won = false;
+        System.out.println("My priority: " + priority);
+        if(servers.values().size() == 1) {
+            System.out.println("No other servers known. Making self coordinator.");
+            isCoordinator = true;
+        } else {
+            System.out.println("Known servers: " + servers.values().size());
+            boolean higherPriorityExists = false;
+            int i = 0;
+            while(i < servers.values().size() && !higherPriorityExists) {
+                String ip = (String) servers.keySet().toArray()[i];
+                if (!ip.equals(localIP.getHostName())) {
+                    ServerRequest stub = servers.get(ip);
+                    if(stub != null) {
+                        boolean tied = true;
+                        while(tied) {
+                            try {
+                                int remotePriority = stub.getPriority();
+                                System.out.println("Priority comparison::: Mine: " + priority + " Theirs: " + remotePriority);
+                                if(priority > remotePriority) {
+                                    tied = false;
+                                }
+                                else if(priority < remotePriority) {
+                                    tied = false;
+                                    higherPriorityExists = true;
+                                    stub.requestElection();
+                                }
+                            } catch (RemoteException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                }
+                i++;
+            }
+            isCoordinator = !higherPriorityExists;
+        }
+
+        System.out.println("Am I the coordinator? - " + ((isCoordinator) ? "Yes": "No"));
+        if(isCoordinator) {
+            for(ServerRequest stub: servers.values()) {
+                if(stub != null) {
+                    stub.iAmCoordinator(localIP);
+                }
+            }
+        }
+    }
 
     /**
      * Class usage statement.
