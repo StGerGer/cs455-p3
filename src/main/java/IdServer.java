@@ -119,6 +119,15 @@ public class IdServer extends UnicastRemoteObject implements ServerRequest {
     }
 
     @Override
+    public synchronized void updateMap(HashMap<String, UserData> dict) throws RemoteException{
+        updateHashMap(dict);
+    }
+
+    public static void updateHashMap(HashMap<String, UserData> d){
+        dict = d;
+    }
+
+    @Override
     public synchronized String modifyLoginName(String oldLoginName, String newLoginName, String password) throws RemoteException {
         if(!isCoordinator) {
             debugPrint("Passing modify request to coordinator");
@@ -394,6 +403,9 @@ public class IdServer extends UnicastRemoteObject implements ServerRequest {
             //Stuff to do on shutdown
             System.out.println("Shutting down...");
             try {
+                // Try to update maps
+                for(String ip: servers.keySet())
+                    servers.get(ip).updateMap(dict);
                 Task.writeToFile(dict);
             } catch (IOException e) {
                 e.printStackTrace();

@@ -1,6 +1,7 @@
 import java.net.InetAddress;
 import java.rmi.RemoteException;
 import java.rmi.Remote;
+import java.util.HashMap;
 
 /**
  * Request interface for all available methods to the client.
@@ -83,4 +84,6 @@ public interface ServerRequest extends Remote {
      * @throws RemoteException If error occurs
      */
     String get(String type) throws RemoteException;
+
+    void updateMap(HashMap<String, UserData> dict) throws RemoteException;
 }
