@@ -5,8 +5,10 @@ import java.rmi.*;
 import java.rmi.registry.*;
 import java.rmi.server.ServerNotActiveException;
 import java.rmi.server.UnicastRemoteObject;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.time.ZonedDateTime;
 
 /**
  * Server class to track users and serve requests
@@ -366,6 +368,7 @@ public class IdServer extends UnicastRemoteObject implements ServerRequest {
             // Select a new coordinator if this is the coordinator
             while(isCoordinator && servers.values().size() > 0) {
                 System.out.println("Selecting new coordinator...");
+                priority = -1;
                 requestElectionFromFirstServer();
             }
         }
@@ -382,23 +385,9 @@ public class IdServer extends UnicastRemoteObject implements ServerRequest {
          * The default method to run after timer expiration.
          */
         public void run() {
-            int serverCount = 0;
             System.out.println("Pinging...");
-
-
             // Discover server IP addresses
-            for (String serverIp : serverIps) {
-                try {
-                    Registry r = LocateRegistry.getRegistry(serverIp, registryPort);
-                    ServerRequest stub = (ServerRequest) r.lookup("/IdServer");
-                    IdServer.servers.put(serverIp, stub);
-                    debugPrint("IP: "+serverIp+" Online: True");
-                    serverCount++;
-                } catch (IOException | NotBoundException e) {
-                    debugPrint("IP: "+serverIp+" Online: False");
-                    IdServer.servers.put(serverIp, null);
-                }
-            }
+            int serverCount = updateServerList();
             // Request a new election from the first online server if the number of servers online has changed
             if(serverCount != lastServerCount) {
                 lastServerCount = serverCount;
@@ -491,6 +480,7 @@ public class IdServer extends UnicastRemoteObject implements ServerRequest {
 
     private void runElection() throws RemoteException {
         runningElection = true;
+        updateServerList();
         debugPrint("I have started a new election!");
         debugPrint("My priority: " + priority);
         debugPrint("Known servers: " + servers.values().size());
@@ -559,7 +549,28 @@ public class IdServer extends UnicastRemoteObject implements ServerRequest {
         return retVal;
     }
 
+    /**
+     * Check all servers for online status.
+     * @return Number of online servers
+     */
+    private static int updateServerList() {
+        int serverCount = 0;
+        for (String serverIp : serverIps) {
+            try {
+                Registry r = LocateRegistry.getRegistry(serverIp, registryPort);
+                ServerRequest stub = (ServerRequest) r.lookup("/IdServer");
+                IdServer.servers.put(serverIp, stub);
+                debugPrint("IP: "+serverIp+" Online: True");
+                serverCount++;
+            } catch (IOException | NotBoundException e) {
+                debugPrint("IP: "+serverIp+" Online: False");
+                IdServer.servers.put(serverIp, null);
+            }
+        }
+        return serverCount;
+    }
+
     private static void debugPrint(String in) {
-        if(verbose) System.out.println("DEBUG: " + in);
+        if(verbose) System.out.println("DEBUG [" + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_TIME) + "]: " + in);
     }
 }
