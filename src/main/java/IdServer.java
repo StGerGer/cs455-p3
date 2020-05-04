@@ -347,6 +347,7 @@ public class IdServer extends UnicastRemoteObject implements ServerRequest {
     public void iAmCoordinator(InetAddress ip) {
         System.out.println("New coordinator: " + ip.getHostAddress());
         lastKnownCoordinator = ip;
+        isCoordinator = lastKnownCoordinator.getHostAddress().equals(localIP.getHostAddress());
     }
 
     @Override

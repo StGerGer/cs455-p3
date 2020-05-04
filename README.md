@@ -10,7 +10,6 @@ Distributed IdentityServer which accepts account requests from users.
 ## Files
     * IdClient.java      - Client entrypoint file
     * IdServer.java      - Server entrypoint file
-    * LoginRequest.java  - Source file
     * ServerRequest.java - Source file
     * UserData.java      - Source file
     * mysecurity.policy  - Java security policy file
