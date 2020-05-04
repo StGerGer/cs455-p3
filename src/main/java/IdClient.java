@@ -24,7 +24,7 @@ public class IdClient {
 		try {
 			Registry registry = LocateRegistry.getRegistry(host, registryPort);
 //			LoginRequest stub = (LoginRequest) registry.lookup("//" + host + ":" + registryPort + "/IdServer");
-			LoginRequest stub = (LoginRequest) registry.lookup("/IdServer");
+			ServerRequest stub = (ServerRequest) registry.lookup("/IdServer");
 
 			// Handle all query types ---------------------------------
 			// Create
@@ -81,7 +81,7 @@ public class IdClient {
 	 * @param password User's password, if applicable
 	 * @throws RemoteException
 	 */
-	private static void queryCreate(LoginRequest stub, String loginName, String realName, String password) throws RemoteException {
+	private static void queryCreate(ServerRequest stub, String loginName, String realName, String password) throws RemoteException {
 		if(password != null) {
 			try {
 				password = trySHA(password);
@@ -99,7 +99,7 @@ public class IdClient {
 	 * @param loginName Login name to find in the database
 	 * @throws RemoteException
 	 */
-	private static void queryLookup(LoginRequest stub, String loginName) throws RemoteException {
+	private static void queryLookup(ServerRequest stub, String loginName) throws RemoteException {
 		System.out.println(stub.lookup(loginName));
 	}
 
@@ -109,7 +109,7 @@ public class IdClient {
 	 * @param uuid UUID to reverse lookup
 	 * @throws RemoteException
 	 */
-	private static void queryReverseLookup(LoginRequest stub, String uuid) throws RemoteException {
+	private static void queryReverseLookup(ServerRequest stub, String uuid) throws RemoteException {
 		System.out.println(stub.reverseLookup(uuid));
 	}
 
@@ -121,7 +121,7 @@ public class IdClient {
 	 * @param password User's password, if applicable
 	 * @throws RemoteException
 	 */
-	private static void queryModify(LoginRequest stub, String oldName, String newName, String password) throws RemoteException {
+	private static void queryModify(ServerRequest stub, String oldName, String newName, String password) throws RemoteException {
 		if(password != null) {
 			try {
 				password = trySHA(password);
@@ -139,7 +139,7 @@ public class IdClient {
 	 * @param password User's password, if applicable
 	 * @throws RemoteException
 	 */
-	private static void queryDelete(LoginRequest stub, String loginName, String password) throws RemoteException {
+	private static void queryDelete(ServerRequest stub, String loginName, String password) throws RemoteException {
 		if(password != null) {
 			try {
 				password = trySHA(password);
@@ -156,7 +156,7 @@ public class IdClient {
 	 * @param type
 	 * @throws RemoteException
 	 */
-	private static void queryGet(LoginRequest stub, String type) throws RemoteException {
+	private static void queryGet(ServerRequest stub, String type) throws RemoteException {
 		System.out.println(stub.get(type));
 	}
 

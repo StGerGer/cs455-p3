@@ -14,31 +14,34 @@ import java.util.concurrent.TimeUnit;
  * @author Tanner Purves
  * @author Nate St. George
  */
-public class IdServer extends UnicastRemoteObject implements LoginRequest, ServerRequest {
+public class IdServer extends UnicastRemoteObject implements ServerRequest {
+    // RMI Registry port
     private static int registryPort = 1099;
-    // uname: [uuid, ip, receivedTime, realUname, lastChangeDate]
-    private static Timer t1;
-    private static Timer t2;
+    // Known server IPs
+    private static String[] serverIps = new String[]{"172.20.0.2", "172.20.0.3", "172.20.0.4"};
+    // User data storage and server information storage
     private static HashMap<String, UserData> dict;
     private static HashMap<String, ServerRequest> servers;
+    // Is this server the coordinator?
     private static boolean isCoordinator = false;
+    // This server's IP address
     private static InetAddress localIP;
+    // This server's last known coordinator IP
     private static InetAddress lastKnownCoordinator;
+    // This server's priority number -- used to determine coordinator
     private static Random r = new Random();
     private static int priority = r.nextInt(100000);
-
-    // Define localIP
-    static {
-        try {
-            localIP = InetAddress.getLocalHost();
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        }
-    }
+    // Is this server currently running an election? Used to prevent running multiple elections at a time.
+    private static boolean runningElection = false;
+    // Is this server running in verbose mode?
+    private static boolean verbose = false;
 
     public IdServer(String s) throws RemoteException, UnknownHostException {
         super();
         dict = new HashMap<>();
+        localIP = InetAddress.getLocalHost();
+        System.out.println("New server started: " + s);
+        System.out.println("Address: " + localIP.getHostAddress());
     }
 
     @Override
@@ -129,6 +132,11 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
     public String delete(String loginName, String password) throws RemoteException {
         String retVal = "";
 
+        if(!isCoordinator) {
+            debugPrint("Passing delete request to coordinator");
+            return servers.get(lastKnownCoordinator.getHostAddress()).delete(loginName, password);
+        }
+
         if(dict.containsKey(loginName)) {
             UserData ud = dict.get(loginName);
             if(ud.hasPassword() && ud.getPassword().equals(password)) {
@@ -150,6 +158,11 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
     @Override
     public String get(String type) throws RemoteException {
         String retVal = "";
+
+        if(!isCoordinator) {
+            debugPrint("Passing get request to coordinator");
+            return servers.get(lastKnownCoordinator.getHostAddress()).get(type);
+        }
 
         switch (type.toLowerCase()) {
             case "users":
@@ -216,7 +229,8 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
      * @param args Command line parameters
      */
     public static void main(String[] args) {
-        boolean verbose = false;
+
+        servers = new HashMap<>();
 
         // Arg parse stuff
         if (args.length > 0) {
@@ -246,7 +260,19 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
             }
         }
 
-        System.out.println("Address: " + localIP.getHostAddress());
+        // Timers to be used for running tasks repeatedly
+        Timer t1 = new Timer();
+        Timer t2 = new Timer();
+        // New timer scheduled for 5 min with a 5 min delay
+        t1.scheduleAtFixedRate(new Task(dict), 5*60*1000, 5*60*1000);
+        Runtime.getRuntime().addShutdownHook(new ShutdownHook());
+
+        // Sleep allows for server status to populate
+        try {
+            TimeUnit.SECONDS.sleep(2);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
 
         // Connect to the registry or create a new registry if there isn't one already
         Registry registry = null;
@@ -266,22 +292,20 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
         }
 
         try {
-            // There is probably a lot better way to print messages verbosely, but oh well...
 
             // Create and install a security manager
             System.setSecurityManager(new SecurityManager());
             
-            System.out.println("Set security manager");
+            debugPrint("Set security manager");
             //Registry registry = LocateRegistry.getRegistry(registryPort);
             
-            System.out.println("Got registry");
-            IdServer obj = new IdServer("//IdServer");
-            // TODO: Fails here
+            debugPrint("Got registry");
+            IdServer obj = new IdServer("/IdServer");
             System.out.println("Created server");
 //            registry.rebind("//localhost:" + registryPort + "/IdServer", obj);
             registry.rebind("/IdServer", obj);
             readFile();
-            System.out.println("IdServer bound in registry");
+            debugPrint("IdServer bound in registry");
         }
         catch (IOException | ClassNotFoundException e){
             System.out.println("No backup found... starting fresh.");
@@ -291,34 +315,14 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
             e.printStackTrace();
         }
 
-        servers = new HashMap<String, ServerRequest>();
-
-        t1 = new Timer();
-        t2 = new Timer();
-        // New timer scheduled for 5 min with a 5 min delay
-        t1.scheduleAtFixedRate(new Task(dict), 5*60*1000, 5*60*1000);
         // New Ping scheduled for every 30 seconds to check if servers are still online
         t2.scheduleAtFixedRate(new Ping(), 0, 30*1000);
-        Runtime.getRuntime().addShutdownHook(new ShutdownHook());
-
-        // Sleep allows for server status to populate
-        try {
-            TimeUnit.SECONDS.sleep(2);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-//        System.out.println("Server list empty: "+servers.isEmpty());
-//        for(String ip: servers.keySet())
-//            System.out.println("IP: "+ip+" Online: "+servers.get(ip));
-
-        // Start election now that we have a list of online servers
-        runElection();
 
     }
 
     @Override
-    public int getPriority() throws RemoteException {
-        System.out.println("Importance: " + priority);
+    public int getPriority() {
+        debugPrint("Priority: " + priority);
         return priority;
     }
 
@@ -329,8 +333,17 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
     }
 
     @Override
-    public void requestElection() {
-        runElection();
+    public InetAddress requestCoordinatorIP() throws RemoteException {
+        return lastKnownCoordinator;
+    }
+
+    @Override
+    public void requestElection() throws RemoteException {
+        if(runningElection) {
+            debugPrint("Already running an election.");
+        } else {
+            runElection();
+        }
     }
 
     /**
@@ -351,10 +364,10 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
             }
 
             // Select a new coordinator if this is the coordinator
-//            while(isCoordinator && servers.values().size() > 0) {
-//                System.out.println("Selecting new coordinator...");
-//                runElection();
-//            }
+            while(isCoordinator && servers.values().size() > 0) {
+                System.out.println("Selecting new coordinator...");
+                requestElectionFromFirstServer();
+            }
         }
     }
 
@@ -363,27 +376,33 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
      */
     static class Ping extends TimerTask {
 
+        private static int lastServerCount = 0;
+
         /**
          * The default method to run after timer expiration.
          */
         public void run() {
+            int serverCount = 0;
             System.out.println("Pinging...");
 
-            String[] serverIps = {"172.20.0.2", "172.20.0.3", "172.20.0.4"};
+
             // Discover server IP addresses
             for (String serverIp : serverIps) {
                 try {
                     Registry r = LocateRegistry.getRegistry(serverIp, registryPort);
                     ServerRequest stub = (ServerRequest) r.lookup("/IdServer");
                     IdServer.servers.put(serverIp, stub);
-//                    InetAddress ip = InetAddress.getByName(serverIp);
-//                    boolean reachable = ip.isReachable(5000);
-//                    IdServer.servers.put(serverIp, reachable);
-                    System.out.println("IP: "+serverIp+" Online: True");
+                    debugPrint("IP: "+serverIp+" Online: True");
+                    serverCount++;
                 } catch (IOException | NotBoundException e) {
-                    System.out.println("IP: "+serverIp+" Online: False");
+                    debugPrint("IP: "+serverIp+" Online: False");
                     IdServer.servers.put(serverIp, null);
                 }
+            }
+            // Request a new election from the first online server if the number of servers online has changed
+            if(serverCount != lastServerCount) {
+                lastServerCount = serverCount;
+                requestElectionFromFirstServer();
             }
 
         }
@@ -455,37 +474,45 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
 //        t.schedule(new Task(dict), 5 * 60 * 1000);
 //    }
 
-    public static void runElection() {
-        boolean won = false;
-        System.out.println("My priority: " + priority);
+    private static void requestElectionFromFirstServer() {
+        boolean successfulElection = false;
+        int i = 0;
+        while(i < servers.size() && !successfulElection) {
+            try {
+                servers.get(serverIps[i]).requestElection();
+                successfulElection = true;
+            } catch (RemoteException e) {
+                e.printStackTrace();
+                successfulElection = false;
+            }
+            i++;
+        }
+    }
+
+    private void runElection() throws RemoteException {
+        runningElection = true;
+        debugPrint("I have started a new election!");
+        debugPrint("My priority: " + priority);
+        debugPrint("Known servers: " + servers.values().size());
         if(servers.values().size() == 1) {
             System.out.println("No other servers known. Making self coordinator.");
             isCoordinator = true;
         } else {
-            System.out.println("Known servers: " + servers.values().size());
             boolean higherPriorityExists = false;
             int i = 0;
             while(i < servers.values().size() && !higherPriorityExists) {
                 String ip = (String) servers.keySet().toArray()[i];
-                if (!ip.equals(localIP.getHostName())) {
+                if (!ip.equals(localIP.getHostAddress())) {
+                    debugPrint(localIP.getHostAddress() + ": Comparing to " + ip + "...");
                     ServerRequest stub = servers.get(ip);
                     if(stub != null) {
-                        boolean tied = true;
-                        while(tied) {
-                            try {
-                                int remotePriority = stub.getPriority();
-                                System.out.println("Priority comparison::: Mine: " + priority + " Theirs: " + remotePriority);
-                                if(priority > remotePriority) {
-                                    tied = false;
-                                }
-                                else if(priority < remotePriority) {
-                                    tied = false;
-                                    higherPriorityExists = true;
-                                    stub.requestElection();
-                                }
-                            } catch (RemoteException e) {
-                                e.printStackTrace();
-                            }
+                        int remotePriority = stub.getPriority();
+                        if(priority < remotePriority) {
+                            debugPrint("My priority is lower than " + ip);
+                            higherPriorityExists = true;
+                            stub.requestElection();
+                        } else {
+                            debugPrint("My priority is higher than " + ip);
                         }
                     }
                 }
@@ -494,7 +521,7 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
             isCoordinator = !higherPriorityExists;
         }
 
-        System.out.println("Am I the coordinator? - " + ((isCoordinator) ? "Yes": "No"));
+        debugPrint("Am I the coordinator? - " + ((isCoordinator) ? "Yes": "No"));
         if(isCoordinator) {
             for(ServerRequest stub: servers.values()) {
                 if(stub != null) {
@@ -502,6 +529,7 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
                 }
             }
         }
+        runningElection = false;
     }
 
     /**
@@ -529,5 +557,9 @@ public class IdServer extends UnicastRemoteObject implements LoginRequest, Serve
         }
 
         return retVal;
+    }
+
+    private static void debugPrint(String in) {
+        if(verbose) System.out.println("DEBUG: " + in);
     }
 }
