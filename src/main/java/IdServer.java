@@ -1,8 +1,12 @@
+import javax.rmi.ssl.SslRMIClientSocketFactory;
+import javax.rmi.ssl.SslRMIServerSocketFactory;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.rmi.*;
 import java.rmi.registry.*;
+import java.rmi.server.RMIClientSocketFactory;
+import java.rmi.server.RMIServerSocketFactory;
 import java.rmi.server.ServerNotActiveException;
 import java.rmi.server.UnicastRemoteObject;
 import java.time.format.DateTimeFormatter;
@@ -302,10 +306,20 @@ public class IdServer extends UnicastRemoteObject implements ServerRequest {
             //Registry registry = LocateRegistry.getRegistry(registryPort);
             
             debugPrint("Got registry");
+
             IdServer obj = new IdServer("/IdServer");
+
+            /*
+             * Create remote object and export it to use
+             * custom socket factories.
+             */
+//            RMIClientSocketFactory csf = new SslRMIClientSocketFactory();
+//            RMIServerSocketFactory ssf = new SslRMIServerSocketFactory();
+//            IdServer stub = (IdServer) UnicastRemoteObject.exportObject(obj, registryPort, csf, ssf);
+
             System.out.println("Created server");
-//            registry.rebind("//localhost:" + registryPort + "/IdServer", obj);
             registry.rebind("/IdServer", obj);
+//            registry.rebind("/IdServer", stub);
             readFile();
             debugPrint("IdServer bound in registry");
         }
