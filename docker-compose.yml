@@ -1,7 +1,7 @@
 version: '3'
 services:
     server:
-        image: purvesta/cs455-p3:development
+        image: purvesta/cs455-p3:latest
         networks:
             backend:
         ports:
