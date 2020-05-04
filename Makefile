@@ -1,15 +1,16 @@
 SIZE=3
 
-all: build
+all: daemon
 
 build: 
 	mvn package
-	docker build -t purvesta/cs455-p3:latest .
 
 run: build
+	docker pull purvesta/cs455-p3:latest
 	docker-compose up --scale server=$(SIZE)
 
-daemon: build
+daemon:
+	docker pull purvesta/cs455-p3:latest
 	docker-compose up -d --scale server=$(SIZE)
 
 clean:
