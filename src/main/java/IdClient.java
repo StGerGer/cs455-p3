@@ -20,6 +20,7 @@ public class IdClient {
 	 */
 	public static void main(String[] args) {
 		CommandLine input = handleArgs(args);
+		System.setProperty("javax.net.ssl.trustStore", "./resources/Client_Truststore");
 
 		try {
 			Registry registry = LocateRegistry.getRegistry(host, registryPort);

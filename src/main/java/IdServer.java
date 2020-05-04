@@ -43,7 +43,7 @@ public class IdServer extends UnicastRemoteObject implements ServerRequest {
     private static boolean verbose = false;
 
     public IdServer(String s) throws RemoteException, UnknownHostException {
-        super();
+        super(0, new SslRMIClientSocketFactory(), new SslRMIServerSocketFactory());
         dict = new HashMap<>();
         localIP = InetAddress.getLocalHost();
         System.out.println("New server started: " + s);
@@ -238,6 +238,10 @@ public class IdServer extends UnicastRemoteObject implements ServerRequest {
 
         servers = new HashMap<>();
 
+        System.setProperty("javax.net.ssl.keyStore", "./resources/keystore");
+        System.setProperty("javax.net.ssl.trustStore", "./resources/Client_Truststore");
+        System.setProperty("javax.net.ssl.keyStorePassword", "bestTeamEver");
+
         // Arg parse stuff
         if (args.length > 0) {
             switch(args.length){
@@ -313,13 +317,10 @@ public class IdServer extends UnicastRemoteObject implements ServerRequest {
              * Create remote object and export it to use
              * custom socket factories.
              */
-//            RMIClientSocketFactory csf = new SslRMIClientSocketFactory();
-//            RMIServerSocketFactory ssf = new SslRMIServerSocketFactory();
-//            IdServer stub = (IdServer) UnicastRemoteObject.exportObject(obj, registryPort, csf, ssf);
 
             System.out.println("Created server");
             registry.rebind("/IdServer", obj);
-//            registry.rebind("/IdServer", stub);
+            // registry.rebind("/IdServer", stub);
             readFile();
             debugPrint("IdServer bound in registry");
         }
@@ -404,6 +405,7 @@ public class IdServer extends UnicastRemoteObject implements ServerRequest {
             int serverCount = updateServerList();
             // Request a new election from the first online server if the number of servers online has changed
             if(serverCount != lastServerCount) {
+                debugPrint("Different number of servers from last ping. Beginning election...");
                 lastServerCount = serverCount;
                 requestElectionFromFirstServer();
             }
@@ -484,8 +486,8 @@ public class IdServer extends UnicastRemoteObject implements ServerRequest {
             try {
                 servers.get(serverIps[i]).requestElection();
                 successfulElection = true;
-            } catch (RemoteException e) {
-                e.printStackTrace();
+            } catch (NullPointerException | RemoteException e) {
+                debugPrint("Unable to connect to " + serverIps[i]);
                 successfulElection = false;
             }
             i++;
