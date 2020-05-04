@@ -51,7 +51,12 @@ public class IdServer extends UnicastRemoteObject implements ServerRequest {
     }
 
     @Override
-    public String createLoginName(String loginName, String realName, String password) throws RemoteException {
+    public synchronized String createLoginName(String loginName, String realName, String password) throws RemoteException {
+        if(!isCoordinator) {
+            debugPrint("Passing create request to coordinator");
+            return servers.get(lastKnownCoordinator.getHostAddress()).createLoginName(loginName, realName, password);
+        }
+
         System.out.println("Adding " + loginName + " to registry...");
         String retVal = "";
         if(dict.containsKey(loginName)){
@@ -75,7 +80,11 @@ public class IdServer extends UnicastRemoteObject implements ServerRequest {
     }
 
     @Override
-    public String lookup(String loginName) throws RemoteException{
+    public synchronized String lookup(String loginName) throws RemoteException{
+        if(!isCoordinator) {
+            debugPrint("Passing lookup request to coordinator");
+            return servers.get(lastKnownCoordinator.getHostAddress()).lookup(loginName);
+        }
         String retVal = "";
         if(dict.containsKey(loginName)){
             UserData ud = dict.get(loginName);
@@ -91,7 +100,11 @@ public class IdServer extends UnicastRemoteObject implements ServerRequest {
     }
 
     @Override
-    public String reverseLookup(String Uuid) throws RemoteException{
+    public synchronized String reverseLookup(String Uuid) throws RemoteException{
+        if(!isCoordinator) {
+            debugPrint("Passing reverse-lookup request to coordinator");
+            return servers.get(lastKnownCoordinator.getHostAddress()).reverseLookup(Uuid);
+        }
         String loginName = findUUID(Uuid);
         String retVal = "";
 
@@ -106,7 +119,12 @@ public class IdServer extends UnicastRemoteObject implements ServerRequest {
     }
 
     @Override
-    public String modifyLoginName(String oldLoginName, String newLoginName, String password) throws RemoteException {
+    public synchronized String modifyLoginName(String oldLoginName, String newLoginName, String password) throws RemoteException {
+        if(!isCoordinator) {
+            debugPrint("Passing modify request to coordinator");
+            return servers.get(lastKnownCoordinator.getHostAddress()).modifyLoginName(oldLoginName, newLoginName, password);
+        }
+
         String retVal = "";
 
         if(dict.containsKey(oldLoginName)) {
@@ -135,7 +153,7 @@ public class IdServer extends UnicastRemoteObject implements ServerRequest {
     }
 
     @Override
-    public String delete(String loginName, String password) throws RemoteException {
+    public synchronized String delete(String loginName, String password) throws RemoteException {
         String retVal = "";
 
         if(!isCoordinator) {
@@ -162,7 +180,7 @@ public class IdServer extends UnicastRemoteObject implements ServerRequest {
     }
 
     @Override
-    public String get(String type) throws RemoteException {
+    public synchronized String get(String type) throws RemoteException {
         String retVal = "";
 
         if(!isCoordinator) {
