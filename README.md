@@ -1,42 +1,46 @@
-# CS455 p2-identityserver
+# CS455 p3-identityserver
 
 * Authors: Nate St. George, Tanner Purves
 * Class: CS455 or CS555 [Distributed Systems] Section #1 Spring 2020
 
 ## Overview
 
-IdentityServer which accepts account requests from users.
+Distributed IdentityServer which accepts account requests from users.
 
 ## Files
-    * IdClient.java     - Client entrypoint file
-    * IdServer.java     - Server entrypoint file
-    * LoginRequest.java - Source file
-    * UserData.java     - Source file
-    * mysecurity.policy - Java security policy file
-    * pom.xml           - Maven config file
-    * README.md         - This file
+    * IdClient.java      - Client entrypoint file
+    * IdServer.java      - Server entrypoint file
+    * LoginRequest.java  - Source file
+    * ServerRequest.java - Source file
+    * UserData.java      - Source file
+    * mysecurity.policy  - Java security policy file
+    * pom.xml            - Maven config file
+    * Dockerfile         - Build file
+    * docker-compose.yml - Build file
+    * Makefile           - Build file
+    * README.md          - This file
 
 ## Building the code
 
 From within the root directory of the project:
 
-    $ mvn package
-    $ java -cp target/p2-1.0-SNAPSHOT-jar-with-dependencies.jar -Djava.security.policy=./mysecurity.policy IdServer [--numport <port#>] [--verbose]
+    $ make [SIZE=<num_servers] // By default, 3 servers are generated unless otherwise specified with the SIZE parameter
+    $ java -cp target/p3-1.0-SNAPSHOT-jar-with-dependencies.jar IdClient --server <serverhost> [--numport <port#] <query>
 
-Then in another terminal:
-    $ java -cp target/p2-1.0-SNAPSHOT-jar-with-dependencies.jar IdClient --server <serverhost> [--numport <port#] <query>
+When wanting to take down servers and clean up directory, from the root directory simply run:
+    $ make clean
 
 ## Testing
 
-Testing this code was fairly simple. Through simply interacting with the client application and adding debug statements throughout the code, we were able to simply and swiftly test and debug the code. We ran through every feature that was listed on the assignment documentation when testing the program by hand so that we could ensure we had implemented the necessary features.
+Testing this code was a bit different than the previous project. Initially it was trying to get the docker containers to be able to see each other and communicate through the RMI port. Then it was checking the logs to see if our DEBUG statements indicated that they had performed correctly when it came to elections and server discovery. However after looking through each of the feature requirements, we were able to ensure that we tested correctly.
 
 ## Reflection
 
-Throughout the development process, we communicated well as a team. This allowed for easy distribution of the workload. I believe we split up the work on this project quite equally, all while getting to dabble in both sides of this project (server and client).
+Once again we communicated quite well throughout this process of developing this project. We were able to split up the worklaod evenly and work together well enough as a team to put together a nearly finished product. We were able to utilize Docker and docker-compose for simple and effective scalability with our servers.
 
-As far as the development process goes, we simply used a github repository and communication to tackle the project. This was a system that worked quite well in this scenario.
+As far as the development process goes, we simply used a github repository and communication to tackle the project as well as Dockerhub to store our docker images. This worked very well for this project.
 
-We decided to go with Apache Maven as our build system after including one of the apache cli arg parsing packages. This allowed for us to simply handle dependencies and make building and running the project quite simple.
+This project was a lot of fun to work on and even as it comes to a close I am thinking of ways to better it... a load-balancer maybe? Thank you for a fantastic class and a fantastic learning experience :)
 
 ## Extras
 
